@@ -3,205 +3,493 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
   <title>LoCoFusion</title>
-  <meta name="description" content="Low cost camera-radar fusion for fault tolerant smart doorway monitoring.">
+  <meta name="description" content="Low-cost camera + mmWave radar fusion for doorway presence detection on an ESP32-S3.">
+  <meta property="og:title" content="LoCoFusion">
+  <meta property="og:description" content="Low-cost camera + mmWave radar fusion for doorway presence detection on an ESP32-S3.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#f4f5f6">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236a5fa0'/%3E%3Ccircle cx='16' cy='16' r='6' fill='white'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #fbfbf9;
-      --surface: #ffffff;
-      --text: #1b1d21;
-      --muted: #5d6470;
-      --border: #e4e4df;
-      --accent: #2f6fdf;
-      --accent-soft: #e8effc;
-      --todo: #b4560b;
-      --todo-bg: #fdf1e4;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #121418;
-        --surface: #1a1d22;
-        --text: #e8e9eb;
-        --muted: #9aa1ac;
-        --border: #2b2f36;
-        --accent: #7aa7ff;
-        --accent-soft: #1d2a42;
-        --todo: #f0a868;
-        --todo-bg: #2e2216;
-      }
+      color-scheme: light;
+      --bg: #f4f5f6;
+      --surface: #fbfbfc;
+      --text: #24272c;
+      --secondary: #5c636d;
+      --border: #e1e4e8;
+      --line: #c9cdd3;
+
+      --cam: #3d6aa8;
+      --cam-tint: #e9eef5;
+      --radar: #3d7654;
+      --radar-tint: #e7efea;
+      --fusion: #6a5fa0;
+      --fusion-tint: #eeedf5;
+      --bad: #a3453b;
+      --bad-tint: #f6e9e7;
+
+      --container: 1120px;
+      --radius: 14px;
     }
 
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: 64px; }
     body {
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
       font-size: 17px;
-      line-height: 1.65;
+      line-height: 1.55;
+      letter-spacing: -.011em;
+      -webkit-font-smoothing: antialiased;
     }
-    a { color: var(--accent); }
-    .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+    a { color: var(--cam); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: 2px solid var(--cam); outline-offset: 3px; border-radius: 4px; }
+    p { margin: 0; text-wrap: pretty; }
+    h1, h2, h3 { text-wrap: balance; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
-    nav {
-      position: sticky; top: 0; z-index: 10;
-      background: color-mix(in srgb, var(--bg) 88%, transparent);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--border);
-    }
-    nav .wrap {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 16px; height: 56px;
-    }
-    nav .brand { font-weight: 700; text-decoration: none; color: var(--text); }
-    nav ul { display: flex; gap: 20px; list-style: none; margin: 0; padding: 0; }
-    nav ul a { color: var(--muted); text-decoration: none; font-size: 15px; }
-    nav ul a:hover { color: var(--text); }
-    @media (max-width: 640px) { nav ul { display: none; } }
+    .container { max-width: var(--container); margin: 0 auto; padding: 0 24px; }
+    @media (max-width: 640px) { .container { padding: 0 16px; } }
 
-    header.hero { padding: 72px 0 48px; }
-    .eyebrow {
-      font-family: "JetBrains Mono", monospace; font-size: 13px;
-      color: var(--accent); letter-spacing: .04em; text-transform: uppercase;
-    }
-    h1 { font-size: clamp(36px, 7vw, 56px); line-height: 1.1; margin: 12px 0 16px; letter-spacing: -.02em; }
-    .lede { font-size: 20px; color: var(--muted); max-width: 640px; margin: 0 0 28px; }
-    .buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+    /* Navigation */
+    .nav { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--border); }
+    .nav .container { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    .nav-brand { font-size: 17px; font-weight: 600; color: var(--text); }
+    .nav-brand:hover { text-decoration: none; }
+    .nav-links { display: flex; gap: 24px; list-style: none; margin: 0; padding: 0; }
+    .nav-links a { color: var(--secondary); font-size: 14px; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    @media (max-width: 800px) { .nav-links li:not(:last-child) { display: none; } }
+
+    /* Hero */
+    .hero { padding: 72px 0 32px; }
+    .hero-grid { display: grid; grid-template-columns: 5fr 6fr; gap: 56px; align-items: center; }
+    @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } }
+    .hero h1 { font-size: clamp(36px, 4.4vw, 48px); line-height: 1.1; font-weight: 600; letter-spacing: -.025em; margin: 0 0 16px; }
+    .lead { font-size: 20px; line-height: 1.5; color: var(--secondary); margin-bottom: 28px; }
+    .lead strong { color: var(--text); font-weight: 600; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
     .btn {
-      display: inline-block; padding: 10px 18px; border-radius: 8px;
-      font-weight: 600; font-size: 15px; text-decoration: none;
-      border: 1px solid var(--border); color: var(--text); background: var(--surface);
+      display: inline-block; border-radius: 8px; padding: 9px 16px; font-size: 15px; font-weight: 500;
+      border: 1px solid var(--line); color: var(--text); background: var(--surface);
     }
-    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn:hover { text-decoration: none; border-color: var(--secondary); }
+    .btn-primary { background: var(--text); border-color: var(--text); color: var(--bg); }
+    .btn-primary:hover { background: #3a3e45; border-color: #3a3e45; }
+    .meta { font-size: 14px; color: var(--secondary); }
 
-    section { padding: 40px 0; border-top: 1px solid var(--border); }
-    h2 { font-size: 26px; margin: 0 0 16px; letter-spacing: -.01em; }
-    h3 { font-size: 18px; margin: 0 0 6px; }
-
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-    .card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 20px;
+    .figure { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 24px 20px; }
+    @media (max-width: 640px) { .figure { padding: 16px 14px; } }
+    .sc { width: 100%; border-collapse: collapse; font-size: 15px; }
+    .sc caption { text-align: left; font-size: 15px; font-weight: 600; padding-bottom: 12px; }
+    .sc th, .sc td { padding: 12px 8px; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
+    .sc tbody tr:last-child th, .sc tbody tr:last-child td { border-bottom: 0; }
+    .sc thead th { font-size: 13px; font-weight: 600; color: var(--secondary); padding-top: 8px; }
+    .sc thead th:first-child, .sc tbody th { text-align: left; padding-left: 0; }
+    .sc tbody th { font-weight: 500; display: flex; align-items: center; gap: 12px; border-bottom: 0; }
+    .sc tbody tr { border-bottom: 1px solid var(--border); }
+    .sc tbody tr:last-child { border-bottom: 0; }
+    .sc tbody td { border-bottom: 0; }
+    .sc .h-cam { color: var(--cam); }
+    .sc .h-radar { color: var(--radar); }
+    .sc .h-fused { color: var(--fusion); }
+    .sc .fused { background: var(--fusion-tint); }
+    .sc thead .h-fused { background: var(--fusion-tint); border-radius: 8px 8px 0 0; padding-top: 8px; }
+    .sc tbody tr:last-child .fused { border-radius: 0 0 8px 8px; }
+    .sc-icon { width: 36px; height: 36px; flex: none; color: var(--text); }
+    .v { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
+    .v::before { font-size: 12px; line-height: 1; }
+    .v.ok { color: var(--radar); background: var(--radar-tint); }
+    .v.ok::before { content: "\2713"; }
+    .v.bad { color: var(--bad); background: var(--bad-tint); }
+    .v.bad::before { content: "\2715"; }
+    .figure figcaption { margin-top: 14px; font-size: 13px; color: var(--secondary); }
+    @media (max-width: 480px) {
+      .sc-icon { display: none; }
+      .sc { font-size: 14px; }
+      .sc th, .sc td { padding: 10px 4px; }
+      .v { padding: 3px 6px; gap: 3px; }
     }
-    .card p { margin: 0; color: var(--muted); font-size: 15px; }
 
-    .figure {
-      display: grid; place-items: center; min-height: 220px; margin: 16px 0;
-      border: 1px dashed var(--border); border-radius: 12px;
-      color: var(--muted); font-size: 14px; background: var(--surface);
+    /* Sections */
+    .section { padding: 80px 0; border-top: 1px solid var(--border); }
+    @media (max-width: 640px) { .section { padding: 56px 0; } }
+    .section-head { max-width: 680px; margin-bottom: 36px; }
+    h2 { font-size: clamp(26px, 3vw, 32px); line-height: 1.2; font-weight: 600; letter-spacing: -.02em; margin: 0 0 12px; }
+    .section-head p { color: var(--secondary); font-size: 18px; }
+
+    .grid { display: grid; gap: 16px; }
+    .grid > * { min-width: 0; }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 960px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+    .card h3 { font-size: 18px; line-height: 1.3; font-weight: 600; margin: 0 0 6px; letter-spacing: -.015em; }
+    .card p { color: var(--secondary); font-size: 16px; }
+    .card-cam { background: var(--cam-tint); border-color: transparent; }
+    .card-radar { background: var(--radar-tint); border-color: transparent; }
+    .label { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--secondary); letter-spacing: 0; }
+    .label-cam { color: var(--cam); }
+    .label-radar { color: var(--radar); }
+    .label-fusion { color: var(--fusion); }
+
+    .note { color: var(--secondary); max-width: 760px; margin-top: 24px; }
+    .note strong { color: var(--text); font-weight: 600; }
+
+    .state {
+      display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; vertical-align: middle;
+      padding: 2px 8px; font-size: 12px; font-weight: 600; letter-spacing: .03em; line-height: 1.5; white-space: nowrap;
+    }
+    .state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .state-present { color: var(--radar); background: var(--radar-tint); }
+    .state-absent { color: var(--secondary); background: #e8eaed; }
+
+    /* Research question */
+    .question-block { border-left: 3px solid var(--fusion); padding: 4px 0 4px 24px; max-width: 860px; margin-bottom: 40px; }
+    .question { font-size: clamp(21px, 2.4vw, 26px); line-height: 1.4; font-weight: 500; letter-spacing: -.015em; }
+    .subqs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); }
+    .subqs > div { padding: 20px 24px 0 0; }
+    .subqs h3 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+    .subqs p { font-size: 15px; color: var(--secondary); }
+    @media (max-width: 960px) { .subqs { grid-template-columns: repeat(2, 1fr); row-gap: 8px; } }
+    @media (max-width: 560px) { .subqs { grid-template-columns: 1fr; } }
+
+    /* System */
+    .spec { font-size: 24px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 6px; white-space: nowrap; }
+    .arch-card { margin-top: 16px; }
+    .arch { display: grid; grid-template-columns: 1fr auto auto auto auto; align-items: center; }
+    .lanes { display: grid; gap: 12px; }
+    .lane { display: flex; align-items: center; }
+    .node {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px;
+      font-size: 14px; font-weight: 500; line-height: 1.3; flex: 1 1 0; min-width: 0; text-align: center;
+    }
+    .node small { display: block; font-weight: 400; color: var(--secondary); font-size: 12px; margin-top: 2px; }
+    .node-cam { background: var(--cam-tint); border-color: transparent; color: var(--cam); font-weight: 600; flex: 0 0 96px; }
+    .node-radar { background: var(--radar-tint); border-color: transparent; color: var(--radar); font-weight: 600; flex: 0 0 96px; }
+    .node-fusion { background: var(--fusion-tint); border-color: transparent; color: var(--fusion); font-weight: 600; text-align: center; padding: 16px 20px; flex: none; }
+    .node-fusion small { color: var(--secondary); }
+    .arch-out { display: grid; gap: 8px; }
+    .link { position: relative; flex: 0 0 24px; width: 24px; height: 1.5px; background: var(--line); }
+    .link::after {
+      content: ""; position: absolute; right: -1px; top: -4px;
+      border-left: 6px solid var(--line); border-top: 4.5px solid transparent; border-bottom: 4.5px solid transparent;
+    }
+    .arch > .link { width: 32px; }
+    @media (max-width: 960px) {
+      .arch { grid-template-columns: 1fr; justify-items: center; }
+      .lanes { grid-template-columns: 1fr 1fr; width: 100%; }
+      .lane { flex-direction: column; align-items: stretch; }
+      .node-cam, .node-radar { flex-basis: auto; }
+      .link, .arch > .link { width: 1.5px; height: 20px; flex-basis: 20px; align-self: center; }
+      .link::after { right: auto; top: auto; left: -4px; bottom: -1px; border-top: 6px solid var(--line); border-left: 4.5px solid transparent; border-right: 4.5px solid transparent; border-bottom: 0; }
+      .arch-out { grid-auto-flow: column; }
+    }
+    @media (max-width: 560px) { .arch-card { padding: 16px; } .lanes { gap: 10px; } .lane .node { padding: 10px; } }
+
+    h3.subhead { font-size: 20px; font-weight: 600; letter-spacing: -.015em; margin: 48px 0 16px; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-bottom: 14px; }
+
+    /* Evaluation */
+    .conditions { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 48px; border-top: 1px solid var(--border); }
+    .conditions li { display: grid; grid-template-columns: 180px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .conditions strong { font-weight: 600; }
+    .conditions span { color: var(--secondary); }
+    @media (max-width: 800px) { .conditions { grid-template-columns: 1fr; } }
+    @media (max-width: 480px) { .conditions li { grid-template-columns: 1fr; gap: 2px; } }
+
+    /* Timeline */
+    .timeline { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 16px; position: relative; }
+    .timeline::before { content: ""; position: absolute; left: 0; right: 0; top: 5px; height: 1.5px; background: var(--line); }
+    .timeline li { position: relative; padding-top: 28px; }
+    .timeline li::before {
+      content: ""; position: absolute; top: 0; left: 0; width: 12px; height: 12px; border-radius: 50%;
+      background: var(--bg); border: 2px solid var(--cam);
+    }
+    .timeline li:last-child::before { background: var(--fusion); border-color: var(--fusion); }
+    .week { font-size: 14px; font-weight: 600; color: var(--cam); margin-bottom: 2px; }
+    .timeline p { font-size: 15px; line-height: 1.4; color: var(--secondary); }
+    @media (max-width: 960px) {
+      .timeline { grid-template-columns: 1fr; gap: 20px; padding-left: 30px; }
+      .timeline::before { left: 5px; right: auto; top: 6px; bottom: 6px; width: 1.5px; height: auto; }
+      .timeline li { padding-top: 0; }
+      .timeline li::before { left: -30px; top: 5px; }
     }
 
-    table { width: 100%; border-collapse: collapse; font-size: 15px; }
-    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-weight: 600; }
-    .table-scroll { overflow-x: auto; }
+    .refs { padding-left: 1.3em; margin: 0; font-size: 14px; color: var(--secondary); max-width: 900px; }
+    .refs li { margin: 8px 0; }
+    .refs a { overflow-wrap: anywhere; }
 
-    /* Placeholder marker: delete these spans as you fill in real content */
-    .todo {
-      background: var(--todo-bg); color: var(--todo);
-      padding: 1px 6px; border-radius: 4px; font-size: .9em;
-    }
-
-    footer { padding: 32px 0 48px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+    .footer { border-top: 1px solid var(--border); padding: 24px 0 40px; font-size: 13px; color: var(--secondary); }
+    .footer .container { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   </style>
 </head>
 <body>
-  <nav>
-    <div class="wrap">
-      <a class="brand" href="#">LoCoFusion</a>
-      <ul>
-        <li><a href="#overview">Overview</a></li>
-        <li><a href="#approach">Approach</a></li>
-        <li><a href="#hardware">Hardware</a></li>
-        <li><a href="#results">Results</a></li>
+  <nav class="nav" aria-label="Sections">
+    <div class="container">
+      <a class="nav-brand" href="#">LoCoFusion</a>
+      <ul class="nav-links">
+        <li><a href="#idea">Idea</a></li>
+        <li><a href="#question">Research</a></li>
+        <li><a href="#system">System</a></li>
+        <li><a href="#evaluation">Evaluation</a></li>
+        <li><a href="#timeline">Timeline</a></li>
         <li><a href="#team">Team</a></li>
+        <li><a href="https://github.com/willhuang04/LoCoFusion">GitHub</a></li>
       </ul>
     </div>
   </nav>
 
   <header class="hero">
-    <div class="wrap">
-      <div class="eyebrow">Camera · Radar · Sensor Fusion</div>
-      <h1>LoCoFusion</h1>
-      <p class="lede">Low cost camera-radar fusion for fault tolerant smart doorway monitoring.</p>
-      <div class="buttons">
-        <a class="btn primary" href="https://github.com/willhuang04/LoCoFusion">View on GitHub</a>
-        <a class="btn" href="#overview">Learn more</a>
+    <div class="container hero-grid">
+      <div>
+        <h1>LoCoFusion</h1>
+        <p class="lead"><strong>Is someone standing in the doorway?</strong> A low-cost camera and a 24&nbsp;GHz mmWave radar, fused on an ESP32-S3 to answer that more reliably than either sensor alone.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#idea">Read the overview</a>
+          <a class="btn" href="https://github.com/willhuang04/LoCoFusion">View on GitHub</a>
+        </div>
+        <p class="meta">UCLA EC ENGR M202A (Embedded Systems), Fall 2026</p>
       </div>
+
+      <figure class="figure">
+        <table class="sc">
+          <caption>Why fuse?</caption>
+          <thead>
+            <tr><th scope="col">Situation</th><th scope="col" class="h-cam">Camera</th><th scope="col" class="h-radar">Radar</th><th scope="col" class="h-fused">Fused</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row"><svg class="sc-icon" viewBox="0 0 40 40" aria-hidden="true"><circle cx="34" cy="7" r="3.2" fill="#c49a3a"/><rect x="11" y="7" width="18" height="29" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="15" r="3.6" fill="#4a4f57"/><path d="M15.4 36 V24.5 Q15.4 20.2 20 20.2 Q24.6 20.2 24.6 24.5 V36 Z" fill="#4a4f57"/></svg>Person, lights on</th>
+              <td><span class="v ok">Present</span></td>
+              <td><span class="v ok">Present</span></td>
+              <td class="fused"><span class="v ok">Present</span></td>
+            </tr>
+            <tr>
+              <th scope="row"><svg class="sc-icon" viewBox="0 0 40 40" aria-hidden="true"><path d="M35.5 3.4 a4.2 4.2 0 1 0 0 7.6 a3.4 3.4 0 1 1 0 -7.6 Z" fill="#7d8591"/><rect x="11" y="7" width="18" height="29" rx="1.5" fill="#3a3e45" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="15" r="3.6" fill="#8b929c"/><path d="M15.4 36 V24.5 Q15.4 20.2 20 20.2 Q24.6 20.2 24.6 24.5 V36 Z" fill="#8b929c"/></svg>Person in the dark</th>
+              <td><span class="v bad">Absent</span></td>
+              <td><span class="v ok">Present</span></td>
+              <td class="fused"><span class="v ok">Present</span></td>
+            </tr>
+            <tr>
+              <th scope="row"><svg class="sc-icon" viewBox="0 0 40 40" aria-hidden="true"><rect x="11" y="7" width="18" height="29" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><g transform="translate(20 20)" fill="#7d8591"><ellipse cx="0" cy="-5.2" rx="2.5" ry="4.6"/><ellipse cx="0" cy="-5.2" rx="2.5" ry="4.6" transform="rotate(120)"/><ellipse cx="0" cy="-5.2" rx="2.5" ry="4.6" transform="rotate(240)"/><circle r="1.8" fill="#4a4f57"/></g></svg>Fan, empty doorway</th>
+              <td><span class="v ok">Absent</span></td>
+              <td><span class="v bad">Present</span></td>
+              <td class="fused"><span class="v ok">Absent</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <figcaption>Expected behavior. Each sensor fails in a different situation; combining them should get all three right.</figcaption>
+      </figure>
     </div>
   </header>
 
   <main>
-    <section id="overview">
-      <div class="wrap">
-        <h2>Overview</h2>
-        <p><span class="todo">TODO</span> What problem does LoCoFusion solve? Who is it for, and why does combining a camera with radar matter for doorway monitoring?</p>
-        <div class="grid">
+    <section class="section" id="idea">
+      <div class="container">
+        <div class="section-head">
+          <h2>Two cheap sensors, different blind spots</h2>
+          <p>Lighting, HVAC, and security all need to know if someone is present. The doorway is the natural place to ask, but each cheap sensor fails in its own way.</p>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card card-cam">
+            <p class="label label-cam">Camera</p>
+            <h3>Knows what a person looks like</h3>
+            <p>Few false alarms from objects, but fails in the dark and when the view is partly blocked.</p>
+          </div>
+          <div class="card card-radar">
+            <p class="label label-radar">mmWave radar</p>
+            <h3>Senses presence in the dark</h3>
+            <p>Sees through light obstructions and even breathing, but can't tell a person from a fan, curtain, or pet.</p>
+          </div>
+        </div>
+
+        <p class="note">Their failure modes barely overlap, so <strong>fusing them</strong> should beat either one alone. Both run on a single ESP32-S3 that outputs one answer: <span class="state state-present">PRESENT</span> or <span class="state state-absent">ABSENT</span>. No counting, identifying, or tracking.</p>
+      </div>
+    </section>
+
+    <section class="section" id="question">
+      <div class="container">
+        <div class="section-head">
+          <h2>Research question</h2>
+        </div>
+        <div class="question-block">
+          <p class="question">Can a lightweight ML model that combines camera and radar detect presence more reliably than either sensor alone, within the limits of an ESP32-S3?</p>
+        </div>
+        <div class="subqs">
+          <div><h3>Reliability</h3><p>How much does fusion improve accuracy, precision, and recall?</p></div>
+          <div><h3>Learned vs. rule</h3><p>Does a small trained classifier beat a hand-written rule?</p></div>
+          <div><h3>Robustness</h3><p>Does it degrade gracefully when one sensor is impaired or fails?</p></div>
+          <div><h3>Cost</h3><p>What does each approach cost in latency, memory, and update rate?</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="system">
+      <div class="container">
+        <div class="section-head">
+          <h2>How it works</h2>
+          <p>Each sensor has its own pipeline. Fusion combines only their high-level outputs, so the model stays small enough for a microcontroller.</p>
+        </div>
+
+        <div class="grid grid-3">
           <div class="card">
-            <h3>Low cost</h3>
-            <p><span class="todo">TODO</span> Hardware budget and what makes it affordable.</p>
+            <p class="label">Board</p>
+            <div class="spec">ESP32-S3</div>
+            <p>Freenove WROOM CAM with onboard camera. 240&nbsp;MHz dual-core, 16&nbsp;MB flash, 8&nbsp;MB PSRAM.</p>
           </div>
           <div class="card">
-            <h3>Fault tolerant</h3>
-            <p><span class="todo">TODO</span> How the system keeps working when one sensor fails or degrades.</p>
+            <p class="label">Radar</p>
+            <div class="spec">24 GHz</div>
+            <p>HLK-LD2410C mmWave sensor over UART. Reports target state, distance, and signal energy.</p>
           </div>
           <div class="card">
-            <h3>Privacy / reliability</h3>
-            <p><span class="todo">TODO</span> Any other key property worth highlighting.</p>
+            <p class="label">Logging</p>
+            <div class="spec">microSD</div>
+            <p>Timestamped, synchronized sensor readings and ground-truth labels.</p>
+          </div>
+        </div>
+
+        <div class="card arch-card" role="img" aria-label="Pipeline: Camera to frame capture to TFLite Micro person detection, giving a person confidence. LD2410C radar to UART parser to radar features. Both feed fusion, by rule or ML, which outputs PRESENT or ABSENT.">
+          <div class="arch">
+            <div class="lanes">
+              <div class="lane">
+                <span class="node node-cam">Camera</span>
+                <span class="link"></span>
+                <span class="node">Frame capture</span>
+                <span class="link"></span>
+                <span class="node">TFLite Micro person detection<small>Person confidence 0–1</small></span>
+              </div>
+              <div class="lane">
+                <span class="node node-radar">LD2410C</span>
+                <span class="link"></span>
+                <span class="node">UART parser</span>
+                <span class="link"></span>
+                <span class="node">Radar features<small>State, distance, energy</small></span>
+              </div>
+            </div>
+            <span class="link"></span>
+            <span class="node node-fusion">Fusion<small>Rule or ML</small></span>
+            <span class="link"></span>
+            <div class="arch-out">
+              <span class="state state-present">PRESENT</span>
+              <span class="state state-absent">ABSENT</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="subhead">Four approaches, compared</h3>
+        <div class="grid grid-4">
+          <div class="card">
+            <span class="dot" style="background:var(--cam)"></span>
+            <h3>Camera-only</h3>
+            <p>Baseline. Present if person confidence clears a threshold.</p>
+          </div>
+          <div class="card">
+            <span class="dot" style="background:var(--radar)"></span>
+            <h3>Radar-only</h3>
+            <p>Baseline. Present if a target is within the doorway's range.</p>
+          </div>
+          <div class="card">
+            <span class="dot" style="border:1.5px solid var(--fusion)"></span>
+            <h3>Rule-based fusion</h3>
+            <p>Trust the camera when confident, fall back to radar in the dark.</p>
+          </div>
+          <div class="card">
+            <span class="dot" style="background:var(--fusion)"></span>
+            <h3>ML fusion</h3>
+            <p>Logistic regression or a tiny neural net trained on our data.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="approach">
-      <div class="wrap">
-        <h2>Approach</h2>
-        <p><span class="todo">TODO</span> Describe the pipeline: how each sensor's data is processed, how the two are fused, and how faults are detected.</p>
-        <div class="figure">System diagram goes here (e.g. &lt;img src="assets/pipeline.png"&gt;)</div>
+    <section class="section" id="evaluation">
+      <div class="container">
+        <div class="section-head">
+          <h2>Evaluation</h2>
+          <p>Six conditions, each chosen to stress one sensor's weakness. Detection quality and on-device cost are measured side by side.</p>
+        </div>
+        <ul class="conditions">
+          <li><strong>Normal lighting</strong><span>Both sensors working well</span></li>
+          <li><strong>Darkness</strong><span>Camera degrades; radar carries the decision</span></li>
+          <li><strong>Partial obstruction</strong><span>Person partly hidden; camera confidence drops</span></li>
+          <li><strong>Sensor failure</strong><span>One sensor disconnected or zeroed</span></li>
+          <li><strong>Empty doorway</strong><span>False-positive rate with no one present</span></li>
+          <li><strong>Moving objects</strong><span>Fans and swinging doors the camera should reject</span></li>
+        </ul>
+        <p class="note"><strong>Metrics:</strong> accuracy, precision, recall, and F1 per condition, alongside latency, decision rate, and flash and RAM use.</p>
       </div>
     </section>
 
-    <section id="hardware">
-      <div class="wrap">
-        <h2>Hardware</h2>
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr><th>Component</th><th>Model</th><th>Approx. cost</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Camera</td><td><span class="todo">TODO</span></td><td><span class="todo">TODO</span></td></tr>
-              <tr><td>Radar</td><td><span class="todo">TODO</span></td><td><span class="todo">TODO</span></td></tr>
-              <tr><td>Compute</td><td><span class="todo">TODO</span></td><td><span class="todo">TODO</span></td></tr>
-            </tbody>
-          </table>
+    <section class="section" id="timeline">
+      <div class="container">
+        <div class="section-head">
+          <h2>Timeline</h2>
+          <p>From individual sensors to a final demo.</p>
+        </div>
+        <ol class="timeline">
+          <li><div class="week">Weeks 3–4</div><p>Each sensor working on its own</p></li>
+          <li><div class="week">Week 5</div><p>Both sensors on one board, synced logging</p></li>
+          <li><div class="week">Week 6</div><p>Collect and label the dataset</p></li>
+          <li><div class="week">Week 7</div><p>Rule-based and ML fusion</p></li>
+          <li><div class="week">Week 8</div><p>Benchmark and optimize</p></li>
+          <li><div class="week">Week 9</div><p>Full experiments</p></li>
+          <li><div class="week">Week 10</div><p>Final demo and report</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section" id="team">
+      <div class="container">
+        <div class="section-head">
+          <h2>Team</h2>
+          <p>Two members, one per sensor. Both share integration, data collection, and evaluation.</p>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <p class="label label-radar">William Huang</p>
+            <h3>Radar &amp; fusion</h3>
+            <p>LD2410C integration, radar features, fusion logic, and ML training.</p>
+          </div>
+          <div class="card">
+            <p class="label label-cam">Mukesh Saravanan</p>
+            <h3>Camera &amp; testing</h3>
+            <p>Camera setup, on-device person detection, data collection, and benchmarking.</p>
+          </div>
         </div>
       </div>
     </section>
 
-    <section id="results">
-      <div class="wrap">
-        <h2>Results</h2>
-        <p><span class="todo">TODO</span> Key metrics, comparisons (camera-only vs. radar-only vs. fused), and behavior under sensor faults.</p>
-        <div class="figure">Results chart or demo video goes here</div>
-      </div>
-    </section>
-
-    <section id="team">
-      <div class="wrap">
-        <h2>Team</h2>
-        <p><span class="todo">TODO</span> Names, roles, affiliation, and advisor if applicable.</p>
+    <section class="section" id="references">
+      <div class="container">
+        <h2>References</h2>
+        <ol class="refs">
+          <li>S. Li, H. Luo, T. Shao, R. Hishiyama, 2024. <a href="https://doi.org/10.1587/transinf.2023EDP7106" target="_blank" rel="noopener noreferrer"><em>A mmWave Sensor and Camera Fusion System for Indoor Occupancy Detection and Tracking</em></a>. IEICE Trans. Inf. &amp; Syst., E107.D(9), 1192–1205.</li>
+          <li>Zhu et al., 2023. <a href="https://arxiv.org/abs/2312.06983" target="_blank" rel="noopener noreferrer"><em>Robust Target Detection of Intelligent Integrated Optical Camera and mmWave Radar System</em></a>. arXiv preprint.</li>
+          <li>Espressif Systems. <a href="https://github.com/espressif/esp-tflite-micro" target="_blank" rel="noopener noreferrer"><em>esp-tflite-micro</em></a>, person-detection example.</li>
+          <li>Hi-Link. <em>HLK-LD2410C</em> datasheet and serial protocol.</li>
+        </ol>
       </div>
     </section>
   </main>
 
-  <footer>
-    <div class="wrap">
-      LoCoFusion · <a href="https://github.com/willhuang04/LoCoFusion">github.com/willhuang04/LoCoFusion</a>
+  <footer class="footer">
+    <div class="container">
+      <span>LoCoFusion. UCLA EC ENGR M202A, Fall 2026.</span>
+      <a href="https://github.com/willhuang04/LoCoFusion">github.com/willhuang04/LoCoFusion</a>
     </div>
   </footer>
 </body>
