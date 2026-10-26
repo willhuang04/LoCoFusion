@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LoCoFusion</title>
+  <meta name="description" content="Low cost camera-radar fusion for fault tolerant smart doorway monitoring.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fbfbf9;
+      --surface: #ffffff;
+      --text: #1b1d21;
+      --muted: #5d6470;
+      --border: #e4e4df;
+      --accent: #2f6fdf;
+      --accent-soft: #e8effc;
+      --todo: #b4560b;
+      --todo-bg: #fdf1e4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121418;
+        --surface: #1a1d22;
+        --text: #e8e9eb;
+        --muted: #9aa1ac;
+        --border: #2b2f36;
+        --accent: #7aa7ff;
+        --accent-soft: #1d2a42;
+        --todo: #f0a868;
+        --todo-bg: #2e2216;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      line-height: 1.65;
+    }
+    a { color: var(--accent); }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+
+    nav {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .wrap {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; height: 56px;
+    }
+    nav .brand { font-weight: 700; text-decoration: none; color: var(--text); }
+    nav ul { display: flex; gap: 20px; list-style: none; margin: 0; padding: 0; }
+    nav ul a { color: var(--muted); text-decoration: none; font-size: 15px; }
+    nav ul a:hover { color: var(--text); }
+    @media (max-width: 640px) { nav ul { display: none; } }
+
+    header.hero { padding: 72px 0 48px; }
+    .eyebrow {
+      font-family: "JetBrains Mono", monospace; font-size: 13px;
+      color: var(--accent); letter-spacing: .04em; text-transform: uppercase;
+    }
+    h1 { font-size: clamp(36px, 7vw, 56px); line-height: 1.1; margin: 12px 0 16px; letter-spacing: -.02em; }
+    .lede { font-size: 20px; color: var(--muted); max-width: 640px; margin: 0 0 28px; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+    .btn {
+      display: inline-block; padding: 10px 18px; border-radius: 8px;
+      font-weight: 600; font-size: 15px; text-decoration: none;
+      border: 1px solid var(--border); color: var(--text); background: var(--surface);
+    }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    section { padding: 40px 0; border-top: 1px solid var(--border); }
+    h2 { font-size: 26px; margin: 0 0 16px; letter-spacing: -.01em; }
+    h3 { font-size: 18px; margin: 0 0 6px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+    }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+    .figure {
+      display: grid; place-items: center; min-height: 220px; margin: 16px 0;
+      border: 1px dashed var(--border); border-radius: 12px;
+      color: var(--muted); font-size: 14px; background: var(--surface);
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; }
+    .table-scroll { overflow-x: auto; }
+
+    /* Placeholder marker: delete these spans as you fill in real content */
+    .todo {
+      background: var(--todo-bg); color: var(--todo);
+      padding: 1px 6px; border-radius: 4px; font-size: .9em;
+    }
+
+    footer { padding: 32px 0 48px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="wrap">
+      <a class="brand" href="#">LoCoFusion</a>
+      <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#approach">Approach</a></li>
+        <li><a href="#hardware">Hardware</a></li>
+        <li><a href="#results">Results</a></li>
+        <li><a href="#team">Team</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <div class="eyebrow">Camera · Radar · Sensor Fusion</div>
+      <h1>LoCoFusion</h1>
+      <p class="lede">Low cost camera-radar fusion for fault tolerant smart doorway monitoring.</p>
+      <div class="buttons">
+        <a class="btn primary" href="https://github.com/willhuang04/LoCoFusion">View on GitHub</a>
+        <a class="btn" href="#overview">Learn more</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="overview">
+      <div class="wrap">
+        <h2>Overview</h2>
+        <p><span class="todo">TODO</span> What problem does LoCoFusion solve? Who is it for, and why does combining a camera with radar matter for doorway monitoring?</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Low cost</h3>
+            <p><span class="todo">TODO</span> Hardware budget and what makes it affordable.</p>
+          </div>
+          <div class="card">
+            <h3>Fault tolerant</h3>
+            <p><span class="todo">TODO</span> How the system keeps working when one sensor fails or degrades.</p>
+          </div>
+          <div class="card">
+            <h3>Privacy / reliability</h3>
+            <p><span class="todo">TODO</span> Any other key property worth highlighting.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="approach">
+      <div class="wrap">
+        <h2>Approach</h2>
+        <p><span class="todo">TODO</span> Describe the pipeline: how each sensor's data is processed, how the two are fused, and how faults are detected.</p>
+        <div class="figure">System diagram goes here (e.g. &lt;img src="assets/pipeline.png"&gt;)</div>
+      </div>
+    </section>
+
+    <section id="hardware">
+      <div class="wrap">
+        <h2>Hardware</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Component</th><th>Model</th><th>Approx. cost</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Camera</td><td><span class="todo">TODO</span></td><td><span class="todo">TODO</span></td></tr>
+              <tr><td>Radar</td><td><span class="todo">TODO</span></td><td><span class="todo">TODO</span></td></tr>
+              <tr><td>Compute</td><td><span class="todo">TODO</span></td><td><span class="todo">TODO</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="results">
+      <div class="wrap">
+        <h2>Results</h2>
+        <p><span class="todo">TODO</span> Key metrics, comparisons (camera-only vs. radar-only vs. fused), and behavior under sensor faults.</p>
+        <div class="figure">Results chart or demo video goes here</div>
+      </div>
+    </section>
+
+    <section id="team">
+      <div class="wrap">
+        <h2>Team</h2>
+        <p><span class="todo">TODO</span> Names, roles, affiliation, and advisor if applicable.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      LoCoFusion · <a href="https://github.com/willhuang04/LoCoFusion">github.com/willhuang04/LoCoFusion</a>
+    </div>
+  </footer>
+</body>
+</html>
