@@ -1,0 +1,53 @@
+# --- Claude / AI assistant files ---
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
+.cursor/
+.cursorrules
+.aider*
+.continue/
+.copilot/
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# --- Windows / Linux ---
+Thumbs.db
+Desktop.ini
+*~
+
+# --- Editors / IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Secrets / local config ---
+.env
+.env.*
+!.env.example
+
+# --- GitHub Pages / Jekyll ---
+_site/
+.jekyll-cache/
+.jekyll-metadata
+.sass-cache/
+
+# --- Node ---
+node_modules/
+npm-debug.log*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# --- Logs / temp ---
+*.log
+*.tmp
