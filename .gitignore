@@ -1,0 +1,15 @@
+# Secrets
+camera_radar/secrets.h
+
+# Environment, model weights, caches
+.venv/
+__pycache__/
+*.pt
+
+# Camera captures (may show people) and scratch files
+*.jpg
+*.log
+midterm/live_view.py
+midterm/prompter*
+midterm/results_*_aborted/
+.DS_Store
