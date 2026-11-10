@@ -1,4 +1,5 @@
 # LoCoFusion
+Low cost camera-radar fusion for fault tolerant smart doorway monitoring.
 
 Low-cost presence detection that fuses a camera with a 24 GHz mmWave radar. An ESP32-S3 streams camera frames over Wi-Fi and radar distance over USB serial. A laptop runs YOLOv8n on the frames and compares three approaches: camera only, radar only, and a simple rule-based fusion.
 
